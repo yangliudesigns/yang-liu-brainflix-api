@@ -15,11 +15,9 @@ app.use(express.json());
 app.use("/videos", videoRoutes);
 
 app.get("/", (req, res) => {
-    res.send("Hello there!!!");
+    res.send("Hello World!!!");
 });
 
-// Start Express server on port 8080
-app.listen(8080, () => {
-    console.log('Server Started on http://localhost:8080');
-    console.log('Press CTRL + C to stop server');
+app.listen(PORT, () => {
+    console.log(`Server is up and running on http://localhost:${PORT}`);
 });
