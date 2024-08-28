@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import express from "express";
-import videoRoutes from "./routes/video.js";
+import videoRoutes from "./routes/videos.js";
 import cors from "cors";
 
 dotenv.config();
