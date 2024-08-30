@@ -1,119 +1,67 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import express from "express";
 import { v4 as uuid } from "uuid";
+import multer from "multer";
 
 const router = express.Router();
+const upload = multer({ dest: "public/images/" });
 
-router
-    .route("/")
+// 内存中保存的上传视频
+const uploadedVideos = [];
+
+// 读取视频数据
+const readVideosData = () => JSON.parse(readFileSync("./data/videos.json", "utf-8"));
+
+// 获取视频列表
+router.route("/")
     .get((req, res) => {
-        const data = readFileSync("./data/videos.json", "utf-8");
-        res.json(JSON.parse(data));
+        const defaultVideos = readVideosData();
+        const allVideos = [...defaultVideos, ...uploadedVideos];
+        res.json(allVideos.map(video => ({
+            id: video.id,
+            title: video.title,
+            channel: video.channel,
+            image: video.image,
+        })));
     })
-    .post((req, res) => {
-        const data = readFileSync("./data/videos.json", "utf-8");
-        const videoData = JSON.parse(data);
+    .post(upload.single("image"), (req, res) => {
         if (req.body && req.body.title && req.body.description) {
+            let imageUrl = `http://localhost:8080/images/default.jpg`;
+
+            if (req.file) {
+                imageUrl = `http://localhost:8080/images/${req.file.filename}`;
+            }
+
             const newVideo = {
                 id: uuid(),
                 title: req.body.title,
-                channel: "DOMOMO",
-                image: `http://localhost:8080/images/${req.body.image || 'default.jpg'}`, 
+                channel: "BrainFlix User",
+                image: imageUrl,
                 description: req.body.description,
-                views: "9,392",
-                likes: "7,584",
-                duration: "3:25",
-                video: "https://unit-3-project-api-0a5620414506.herokuapp.com/stream", 
+                views: "0",
+                likes: "0",
+                duration: "0:00",
+                video: "https://unit-3-project-api-0a5620414506.herokuapp.com/stream?api_key=1b06fab0-9e2f-461b-a0a6-23fee89cd50c",
                 timestamp: Date.now(),
                 comments: [],
             };
-            const newVideoData = [...videoData, newVideo];
-            writeFileSync("./data/videos.json", JSON.stringify(newVideoData));
-            res.send("Video data updated");
+            uploadedVideos.push(newVideo);
+            res.status(201).json(newVideo);
         } else {
-            res.status(400).send("You forgot to include json data in your request");
+            res.status(400).send("Please include title and description in the request body.");
         }
     });
 
+// 获取特定视频信息
 router.route("/:id").get((req, res) => {
-    const data = readFileSync("./data/videos.json", "utf-8");
-    const videos = JSON.parse(data);
-    const foundVideo = videos.find((video) => video.id === req.params.id);
-    if (foundVideo) {
-        res.json(foundVideo);
+    const defaultVideos = readVideosData();
+    const allVideos = [...defaultVideos, ...uploadedVideos];
+    const video = allVideos.find((video) => video.id === req.params.id);
+    if (video) {
+        res.json(video);
     } else {
         res.status(404).send({ message: "Video not found" });
     }
 });
-
-router
-    .route("/:id/comments")
-    .post((req, res) => {
-        const data = readFileSync("./data/videos.json", "utf-8");
-        const videoData = JSON.parse(data);
-
-        if (req.body && req.body.comment) {
-            const newComment = {
-                id: uuid(),
-                name: "Kiwoon",
-                comment: req.body.comment,
-                likes: 0,
-                timestamp: Date.now(),
-            };
-
-            const newVideoData = videoData.map((video) => {
-                if (video.id === req.params.id) {
-                    video.comments.push(newComment);
-                }
-                return video;
-            });
-
-            writeFileSync("./data/videos.json", JSON.stringify(newVideoData));
-            res.send("Comment added");
-        } else {
-            res.status(400).send("You forgot to include json data in your request");
-        }
-    });
-
-router
-    .route("/:videoId/comments/:commentId")
-    .delete((req, res) => {
-        const data = readFileSync("./data/videos.json", "utf-8");
-        const videoData = JSON.parse(data);
-        const selectedVideoId = req.params.videoId;
-        const selectedCommentId = req.params.commentId;
-
-        const newVideoData = videoData.map((video) => {
-            if (video.id === selectedVideoId) {
-                const indexOfComment = video.comments.findIndex(
-                    (comment) => comment.id === selectedCommentId
-                );
-                if (indexOfComment !== -1) {
-                    video.comments.splice(indexOfComment, 1);
-                }
-            }
-            return video;
-        });
-
-        writeFileSync("./data/videos.json", JSON.stringify(newVideoData));
-        res.send("Comment deleted");
-    });
-
-router
-    .route("/:videoId/likes")
-    .put((req, res) => {
-        const data = readFileSync("./data/videos.json", "utf-8");
-        const videoData = JSON.parse(data);
-
-        const newVideoData = videoData.map((video) => {
-            if (video.id === req.params.videoId) {
-                video.likes++;
-            }
-            return video;
-        });
-
-        writeFileSync("./data/videos.json", JSON.stringify(newVideoData));
-        res.send("Like count updated");
-    });
 
 export default router;
